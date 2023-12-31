@@ -2,7 +2,7 @@
 
 ## Objective
 
-I wanted to test various techniques of making polymorphic functions at compile time that would allow following the DRY principle without performance penalty of `call` assembly instruction
+I wanted to test various techniques of making polymorphic functions at compile time that would allow to follow the DRY principle without taking a performance penalty of `call` assembly instruction
 
 ## Conclusion
 
