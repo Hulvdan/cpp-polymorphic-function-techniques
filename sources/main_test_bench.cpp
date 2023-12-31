@@ -27,7 +27,7 @@ std::vector<int> GetVectorOfNumbers(const char* filename) {
 }
 
 //
-// EXAMPLE 1. Inlined manually
+// EXAMPLE 1. Our baseline. Compare function is inlined manually
 //
 void ManuallyInlined_SortAlgorithm(int* numbers, int n) {
     for (int i = 0; i < n; i++) {
@@ -41,7 +41,7 @@ void ManuallyInlined_SortAlgorithm(int* numbers, int n) {
 }
 
 //
-// EXAMPLE 2. Passing function as an argument
+// EXAMPLE 2. Compare function passed as a pointer-argument
 //
 inline int Compare_Variant1(int a, int b) {
     return a > b ? 1 : -1;
@@ -63,7 +63,21 @@ void PassedAsAPointer_SortAlgorithm(int* numbers, int n, int (*cmp)(int, int)) {
 }
 
 //
-// EXAMPLE 3. Using templates and inlining the function inside
+// EXAMPLE 3. Compare function passed as a template-argument
+//
+template <int (*cmp_func)(int, int)>
+constexpr void PassedAsATemplateParameter_SortAlgorithm(int* numbers, int n) {
+    for (int i = 0; i < n; i++) {
+        for (int k = i + 1; k < n; k++) {
+            if (cmp_func(numbers[i], numbers[k]) == -1) {
+                std::swap(numbers[i], numbers[k]);
+            }
+        }
+    }
+}
+
+//
+// EXAMPLE 4. Using a factory for generating a sorting algorithm using templates
 //
 template <int (*cmp_func)(int, int)>
 constexpr auto sort_alg_factory() {
@@ -78,11 +92,26 @@ constexpr auto sort_alg_factory() {
     };
 }
 
-static auto CompileTimeParametrized_SortAlgorithm =
+static auto CompileTimeBuiltTemplate_SortAlgorithm =
     sort_alg_factory<Compare_Variant1>();
 
 //
-// EXAMPLE 4. Using std::invocable with a factory while passing a lambda as a rvalue
+// EXAMPLE 5-6. Compare function passed as an rvalue std::invocable argument that is known at compile-time
+//
+void PassingRValueInvocableAsAnArgument_SortAlgorithm(
+    int* numbers, int n, std::invocable<int, int> auto&& cmp_func
+) {
+    for (int i = 0; i < n; i++) {
+        for (int k = i + 1; k < n; k++) {
+            if (cmp_func(numbers[i], numbers[k]) == -1) {
+                std::swap(numbers[i], numbers[k]);
+            }
+        }
+    }
+}
+
+//
+// EXAMPLE 7. Using a factory for generating a sorting algorithm using rvalue std::invocable lambda
 //
 constexpr auto sort_alg_factory_invocable(
     std::invocable<int, int> auto&& cmp_func
@@ -98,25 +127,10 @@ constexpr auto sort_alg_factory_invocable(
     };
 }
 
-static constexpr auto CompileTimeInvocable_SortAlgorithm =
+static constexpr auto CompileTimeBuiltInvocable_SortAlgorithm =
     sort_alg_factory_invocable([](int a, int b) {
         return a > b ? 1 : -1;
     });
-
-//
-// EXAMPLE 5. Using std::invocable without a factory
-//
-void PassingRValueInvocableAsAnArgument_SortAlgorithm(
-    int* numbers, int n, std::invocable<int, int> auto&& cmp_func
-) {
-    for (int i = 0; i < n; i++) {
-        for (int k = i + 1; k < n; k++) {
-            if (cmp_func(numbers[i], numbers[k]) == -1) {
-                std::swap(numbers[i], numbers[k]);
-            }
-        }
-    }
-}
 
 void Calculate()
 {
@@ -162,8 +176,8 @@ void Calculate()
         for (int i = 0; i < vectors.size(); i++) {
             std::vector<int> numbers(vectors[i]);
 
-            auto phase = benchmark->StartPhase(std::format("3. CompileTimeParametrized_SortAlgorithm. {}", numbers.size()));
-            CompileTimeParametrized_SortAlgorithm(numbers.data(), numbers.size());
+            auto phase = benchmark->StartPhase(std::format("3. PassedAsATemplateParameter_SortAlgorithm. {}", numbers.size()));
+            PassedAsATemplateParameter_SortAlgorithm<Compare_Variant1>(numbers.data(), numbers.size());
             phase->StopPhase();
         }
     }
@@ -172,8 +186,8 @@ void Calculate()
         for (int i = 0; i < vectors.size(); i++) {
             std::vector<int> numbers(vectors[i]);
 
-            auto phase = benchmark->StartPhase(std::format("4. CompileTimeInvocable_SortAlgorithm. {}", numbers.size()));
-            CompileTimeInvocable_SortAlgorithm(numbers.data(), numbers.size());
+            auto phase = benchmark->StartPhase(std::format("4. CompileTimeBuiltTemplate_SortAlgorithm. {}", numbers.size()));
+            CompileTimeBuiltTemplate_SortAlgorithm(numbers.data(), numbers.size());
             phase->StopPhase();
         }
     }
@@ -182,7 +196,7 @@ void Calculate()
         for (int i = 0; i < vectors.size(); i++) {
             std::vector<int> numbers(vectors[i]);
 
-            auto phase = benchmark->StartPhase(std::format("5. PassingRValueInvocableAsAnArgument_SortAlgorithm. Passing a lambda that is known at compile time. {}", numbers.size()));
+            auto phase = benchmark->StartPhase(std::format("5. PassingRValueInvocableAsAnArgument_SortAlgorithm. Passing a compile-time known lambda. {}", numbers.size()));
             PassingRValueInvocableAsAnArgument_SortAlgorithm(
                 numbers.data(),
                 numbers.size(),
@@ -196,12 +210,22 @@ void Calculate()
         for (int i = 0; i < vectors.size(); i++) {
             std::vector<int> numbers(vectors[i]);
 
-            auto phase = benchmark->StartPhase(std::format("5. PassingRValueInvocableAsAnArgument_SortAlgorithm. Passing a function pointer that is known at compile time. {}", numbers.size()));
+            auto phase = benchmark->StartPhase(std::format("6. PassingRValueInvocableAsAnArgument_SortAlgorithm. Passing a compile-time known function. {}", numbers.size()));
             PassingRValueInvocableAsAnArgument_SortAlgorithm(
                 numbers.data(),
                 numbers.size(),
                 Compare_Variant1
             );
+            phase->StopPhase();
+        }
+    }
+
+    {
+        for (int i = 0; i < vectors.size(); i++) {
+            std::vector<int> numbers(vectors[i]);
+
+            auto phase = benchmark->StartPhase(std::format("7. CompileTimeBuiltInvocable_SortAlgorithm. {}", numbers.size()));
+            CompileTimeBuiltInvocable_SortAlgorithm(numbers.data(), numbers.size());
             phase->StopPhase();
         }
     }
