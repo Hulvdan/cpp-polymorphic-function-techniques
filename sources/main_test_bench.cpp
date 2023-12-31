@@ -3,6 +3,7 @@
 #include <chrono>
 #include <thread>
 #include <vector>
+#include <assert.h>
 
 #include "benchmark/cppbenchmark.h"
 
@@ -34,9 +35,11 @@ void ManuallyInlined_SortAlgorithm(int* numbers, int n) {
         for (int k = i + 1; k < n; k++) {
             // It's bad because we will need to change these places everywhere in the codebase.
             // It's a matter of when we will forget to change it in some place
-            auto cmp_result = numbers[i] > numbers[k] ? 1 : -1;
+            auto cmp_result = numbers[i] < numbers[k] ? 1 : -1;
             if (cmp_result == -1) {
-                std::swap(numbers[i], numbers[k]);
+                auto t = numbers[i];
+                numbers[i] = numbers[k];
+                numbers[k] = t;
             }
         }
     }
@@ -46,11 +49,11 @@ void ManuallyInlined_SortAlgorithm(int* numbers, int n) {
 // EXAMPLE 2. Compare function passed as a pointer-argument
 //
 inline int Compare_Variant1(int a, int b) {
-    return a > b ? 1 : -1;
+    return a < b ? 1 : -1;
 }
 
 inline int Compare_Variant2(int a, int b) {
-    return a > b ? -1 : 1;
+    return a < b ? -1 : 1;
 }
 
 void PassedAsAPointer_SortAlgorithm(int* numbers, int n, int (*cmp)(int, int)) {
@@ -60,7 +63,9 @@ void PassedAsAPointer_SortAlgorithm(int* numbers, int n, int (*cmp)(int, int)) {
             // But benchmarks show ~26% worse performance
             auto cmp_result = cmp(numbers[i], numbers[k]);
             if (cmp_result == -1) {
-                std::swap(numbers[i], numbers[k]);
+                auto t = numbers[i];
+                numbers[i] = numbers[k];
+                numbers[k] = t;
             }
         }
     }
@@ -68,14 +73,16 @@ void PassedAsAPointer_SortAlgorithm(int* numbers, int n, int (*cmp)(int, int)) {
 
 //
 // EXAMPLE 3. Compare function passed as a template-argument
-// TODO(hulvdan): Why does it show a bit higher duration?
+// NOTE(hulvdan): Sometimes it shows a bit higher execution duration. I believe this is an error margin
 //
 template <int (*cmp)(int, int)>
 constexpr void PassedAsATemplateParameter_SortAlgorithm(int* numbers, int n) {
     for (int i = 0; i < n; i++) {
         for (int k = i + 1; k < n; k++) {
             if (cmp(numbers[i], numbers[k]) == -1) {
-                std::swap(numbers[i], numbers[k]);
+                auto t = numbers[i];
+                numbers[i] = numbers[k];
+                numbers[k] = t;
             }
         }
     }
@@ -83,7 +90,7 @@ constexpr void PassedAsATemplateParameter_SortAlgorithm(int* numbers, int n) {
 
 //
 // EXAMPLE 4. Using a factory for generating a sorting algorithm using templates
-// TODO(hulvdan): Why does it show a bit higher duration?
+// NOTE(hulvdan): Sometimes it shows a bit higher execution duration. I believe this is an error margin
 //
 template <int (*cmp)(int, int)>
 constexpr auto sort_alg_factory() {
@@ -91,7 +98,9 @@ constexpr auto sort_alg_factory() {
         for (int i = 0; i < n; i++) {
             for (int k = i + 1; k < n; k++) {
                 if (cmp(numbers[i], numbers[k]) == -1) {
-                    std::swap(numbers[i], numbers[k]);
+                    auto t = numbers[i];
+                    numbers[i] = numbers[k];
+                    numbers[k] = t;
                 }
             }
         }
@@ -110,7 +119,9 @@ void PassingRValueInvocableAsAnArgument_SortAlgorithm(
     for (int i = 0; i < n; i++) {
         for (int k = i + 1; k < n; k++) {
             if (cmp_func(numbers[i], numbers[k]) == -1) {
-                std::swap(numbers[i], numbers[k]);
+                auto t = numbers[i];
+                numbers[i] = numbers[k];
+                numbers[k] = t;
             }
         }
     }
@@ -126,7 +137,9 @@ constexpr auto sort_alg_factory_invocable(
         for (int i = 0; i < n; i++) {
             for (int k = i + 1; k < n; k++) {
                 if (cmp_func(numbers[i], numbers[k]) == -1) {
-                    std::swap(numbers[i], numbers[k]);
+                    auto t = numbers[i];
+                    numbers[i] = numbers[k];
+                    numbers[k] = t;
                 }
             }
         }
@@ -135,7 +148,7 @@ constexpr auto sort_alg_factory_invocable(
 
 static constexpr auto CompileTimeBuiltInvocable_SortAlgorithm =
     sort_alg_factory_invocable([](int a, int b) {
-        return a > b ? 1 : -1;
+        return a < b ? 1 : -1;
     });
 
 void Calculate()
@@ -239,6 +252,14 @@ void Calculate()
 
 int main(int argc, char** argv)
 {
+    int numbers[] = { 5,4,3,2,1 };
+    ManuallyInlined_SortAlgorithm(numbers, 5);
+    assert(numbers[0] == 1);
+    assert(numbers[1] == 2);
+    assert(numbers[2] == 3);
+    assert(numbers[3] == 4);
+    assert(numbers[4] == 5);
+
     Calculate();
 
     // const int THREADS = 8;
