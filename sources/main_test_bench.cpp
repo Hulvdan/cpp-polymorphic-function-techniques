@@ -32,6 +32,8 @@ std::vector<int> GetVectorOfNumbers(const char* filename) {
 void ManuallyInlined_SortAlgorithm(int* numbers, int n) {
     for (int i = 0; i < n; i++) {
         for (int k = i + 1; k < n; k++) {
+            // It's bad because we will need to change these places everywhere in the codebase.
+            // It's a matter of when we will forget to change it in some place
             auto cmp_result = numbers[i] > numbers[k] ? 1 : -1;
             if (cmp_result == -1) {
                 std::swap(numbers[i], numbers[k]);
@@ -54,6 +56,8 @@ inline int Compare_Variant2(int a, int b) {
 void PassedAsAPointer_SortAlgorithm(int* numbers, int n, int (*cmp)(int, int)) {
     for (int i = 0; i < n; i++) {
         for (int k = i + 1; k < n; k++) {
+            // Now it's better. We can parametrize the behaviour.
+            // But benchmarks show ~26% worse performance
             auto cmp_result = cmp(numbers[i], numbers[k]);
             if (cmp_result == -1) {
                 std::swap(numbers[i], numbers[k]);
@@ -64,12 +68,13 @@ void PassedAsAPointer_SortAlgorithm(int* numbers, int n, int (*cmp)(int, int)) {
 
 //
 // EXAMPLE 3. Compare function passed as a template-argument
+// TODO(hulvdan): Why does it show a bit higher duration?
 //
-template <int (*cmp_func)(int, int)>
+template <int (*cmp)(int, int)>
 constexpr void PassedAsATemplateParameter_SortAlgorithm(int* numbers, int n) {
     for (int i = 0; i < n; i++) {
         for (int k = i + 1; k < n; k++) {
-            if (cmp_func(numbers[i], numbers[k]) == -1) {
+            if (cmp(numbers[i], numbers[k]) == -1) {
                 std::swap(numbers[i], numbers[k]);
             }
         }
@@ -78,13 +83,14 @@ constexpr void PassedAsATemplateParameter_SortAlgorithm(int* numbers, int n) {
 
 //
 // EXAMPLE 4. Using a factory for generating a sorting algorithm using templates
+// TODO(hulvdan): Why does it show a bit higher duration?
 //
-template <int (*cmp_func)(int, int)>
+template <int (*cmp)(int, int)>
 constexpr auto sort_alg_factory() {
     return [](int* numbers, int n) {
         for (int i = 0; i < n; i++) {
             for (int k = i + 1; k < n; k++) {
-                if (cmp_func(numbers[i], numbers[k]) == -1) {
+                if (cmp(numbers[i], numbers[k]) == -1) {
                     std::swap(numbers[i], numbers[k]);
                 }
             }
