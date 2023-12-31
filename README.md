@@ -1,6 +1,14 @@
 # Testing C++ Polymorphic Function Techniques
 
-## Benchmarking Output
+## Objective
+
+I wanted to test various techniques of making polymorphic functions at compile time that would allow following the DRY principle without performance penalty of `call` assembly instruction
+
+## Conclusion
+
+As benchmarking output shows, using pointers to functions removes the ability from the compiler to optimize the code
+
+## References. Benchmarking Output
 
 ```
 ManuallyInlined_SortAlgorithm. 1000. Total time: 344.600 mcs
