@@ -107,6 +107,7 @@ constexpr auto sort_alg_factory() {
     };
 }
 
+// NOTE(hulvdan): 🤔 I'd be really glad to know the type without turning on the LSP
 static auto CompileTimeBuiltTemplate_SortAlgorithm =
     sort_alg_factory<Compare_Variant1>();
 
@@ -114,11 +115,12 @@ static auto CompileTimeBuiltTemplate_SortAlgorithm =
 // EXAMPLE 5-6. Compare function passed as an rvalue std::invocable argument that is known at compile-time
 //
 void PassingRValueInvocableAsAnArgument_SortAlgorithm(
-    int* numbers, int n, std::invocable<int, int> auto&& cmp_func
+    // NOTE(hulvdan): That's really dumb that we don't see here the return type of the `cmp`
+    int* numbers, int n, std::invocable<int, int> auto&& cmp
 ) {
     for (int i = 0; i < n; i++) {
         for (int k = i + 1; k < n; k++) {
-            if (cmp_func(numbers[i], numbers[k]) == -1) {
+            if (cmp(numbers[i], numbers[k]) == -1) {
                 auto t = numbers[i];
                 numbers[i] = numbers[k];
                 numbers[k] = t;
@@ -131,12 +133,13 @@ void PassingRValueInvocableAsAnArgument_SortAlgorithm(
 // EXAMPLE 7. Using a factory for generating a sorting algorithm using rvalue std::invocable lambda
 //
 constexpr auto sort_alg_factory_invocable(
-    std::invocable<int, int> auto&& cmp_func
+    // NOTE(hulvdan): The same situation. We really need to have a way of restricting the return type of the `cmp`
+    std::invocable<int, int> auto&& cmp
 ) {
-    return [&cmp_func](int* numbers, int n) {
+    return [&cmp](int* numbers, int n) {
         for (int i = 0; i < n; i++) {
             for (int k = i + 1; k < n; k++) {
-                if (cmp_func(numbers[i], numbers[k]) == -1) {
+                if (cmp(numbers[i], numbers[k]) == -1) {
                     auto t = numbers[i];
                     numbers[i] = numbers[k];
                     numbers[k] = t;
@@ -146,6 +149,7 @@ constexpr auto sort_alg_factory_invocable(
     };
 }
 
+// NOTE(hulvdan): Aargh... How do I enable myself knowing the return type?..
 static constexpr auto CompileTimeBuiltInvocable_SortAlgorithm =
     sort_alg_factory_invocable([](int a, int b) {
         return a < b ? 1 : -1;

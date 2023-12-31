@@ -2,11 +2,11 @@
 
 ## Objective
 
-I wanted to test various techniques of making polymorphic functions at compile time that would allow to follow the DRY principle without taking a performance penalty of `call` assembly instruction
+I wanted to test various techniques of making polymorphic functions at compile time that would allow to follow the DRY principle without taking a performance penalty of the `call` assembly instruction
 
 ## Conclusion
 
-As benchmarking output shows, using pointers to functions removes the ability from the compiler to optimize the code
+As the benchmarking output shows, using pointers to functions removes the ability from the compiler to optimize the code
 
 ## References. Benchmarking Output
 
